@@ -20,6 +20,8 @@ class Contract extends Model
     public int $validToTime;
     public string $verifiableCredentialType;
     public string $hasWorkspace;
+    public ?string $scopeType;
+    public ?string $scopeEntity;
 
     public function toEntity(): Entity
     {
@@ -33,6 +35,12 @@ class Contract extends Model
         $entity->setProperty("validToTime", $this->validToTime);
         $entity->setProperty("verifiableCredentialType", $this->verifiableCredentialType);
         $entity->setRelationship("hasWorkspace", $this->hasWorkspace);
+        if (!is_null($this->scopeType)) {
+            $entity->setRelationship("scopeType", $this->scopeType);
+        }
+        if (!is_null($this->scopeEntity)) {
+            $entity->setRelationship("scopeEntity", $this->scopeEntity);
+        }
         return $entity;
     }
 
@@ -46,5 +54,11 @@ class Contract extends Model
         $this->validToTime = $entity->getProperty("validToTime");
         $this->verifiableCredentialType = $entity->getProperty("verifiableCredentialType");
         $this->hasWorkspace = $entity->getRelationship("hasWorkspace");
+        if ($entity->relationshipExists("scopeType")) {
+            $this->scopeType = $entity->getRelationship("scopeType");
+        }
+        if ($entity->relationshipExists("scopeEntity")) {
+            $this->scopeEntity = $entity->getRelationship("scopeEntity");
+        }
     }
 }
