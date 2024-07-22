@@ -18,6 +18,7 @@ class ContractDetail extends Model
     public string $hasWorkspace;
     public ?string $scopeType;
     public ?string $scopeEntity;
+    public ?string $roleScopeName;
 
     public function toEntity(): Entity
     {
@@ -33,6 +34,9 @@ class ContractDetail extends Model
         if (!is_null($this->scopeEntity)) {
             $entity->setRelationship("scopeEntity", $this->scopeEntity);
         }
+        if (!is_null($this->roleScopeName)) {
+            $entity->setProperty("roleScopeName", $this->roleScopeName);
+        }
         return $entity;
     }
 
@@ -47,6 +51,9 @@ class ContractDetail extends Model
         }
         if ($entity->relationshipExists("scopeEntity")) {
             $this->scopeEntity = $entity->getRelationship("scopeEntity");
+        }
+        if ($entity->propertyExists("roleScopeName")) {
+            $this->roleScopeName = $entity->getProperty("roleScopeName");
         }
     }
 }
