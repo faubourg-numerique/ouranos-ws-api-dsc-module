@@ -365,15 +365,27 @@ class ContractDetailController extends Controller
             foreach ($dataServiceActions as $dataServiceAction) {
                 $dataAction = $this->dataActionManager->readOne($dataServiceAction->hasDataAction);
 
-                $data = [
-                    "permission" => [
-                        "name" => "{$dataAction->name} {$contractScopeEntity->getProperty("name")} {$contractDetailScopeEntity->getProperty("name")} {$type->scopeName}",
-                        "description" => "{$dataAction->name} {$contractScopeEntity->getProperty("name")} {$contractDetailScopeEntity->getProperty("name")} {$type->scopeName}",
-                        "action" => $dataAction->name,
-                        "resource" => "^{$baseEndpoint}/{$type->scopeName}/(.*)$",
-                        "is_regex" => true
-                    ]
-                ];
+                if ($dataAction->name === "GET") {
+                    $data = [
+                        "permission" => [
+                            "name" => "{$dataAction->name} {$contractScopeEntity->getProperty("name")} {$contractDetailScopeEntity->getProperty("name")} {$type->scopeName}",
+                            "description" => "{$dataAction->name} {$contractScopeEntity->getProperty("name")} {$contractDetailScopeEntity->getProperty("name")} {$type->scopeName}",
+                            "action" => $dataAction->name,
+                            "resource" => $baseEndpoint . '/' . $type->scopeName,
+                            "is_regex" => false
+                        ]
+                    ];
+                } else {
+                    $data = [
+                        "permission" => [
+                            "name" => "{$dataAction->name} {$contractScopeEntity->getProperty("name")} {$contractDetailScopeEntity->getProperty("name")} {$type->scopeName}",
+                            "description" => "{$dataAction->name} {$contractScopeEntity->getProperty("name")} {$contractDetailScopeEntity->getProperty("name")} {$type->scopeName}",
+                            "action" => $dataAction->name,
+                            "resource" => '^' . $baseEndpoint . '/' . $type->scopeName . '/(.*)$',
+                            "is_regex" => true
+                        ]
+                    ];
+                }
 
                 $errorInfo->details[] = "Creating a permission with the name '{$data["permission"]["name"]}'…";
 
