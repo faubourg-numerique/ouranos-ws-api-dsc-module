@@ -236,7 +236,7 @@ class ContractDetailController extends Controller
                     "password" => $identityManagerGrant->password
                 ]
             ]);
-        } catch(Exception $exception) {
+        } catch(\Exception $exception) {
             $errorInfo->title = "Failed to obtain an access token from Keyrock";
 
             API::response()->setStatusCode(HttpResponseStatusCodes::HTTP_INTERNAL_SERVER_ERROR);
@@ -269,7 +269,7 @@ class ContractDetailController extends Controller
         $response = null;
         try {
             $response = $idm->get("v1/applications/{$identityManagerGrant->clientId}/roles");
-        } catch(Exception $exception) {
+        } catch(\Exception $exception) {
             $errorInfo->title = "Failed to obtain the roles for the '{$identityManagerGrant->clientId}' application";
 
             API::response()->setStatusCode(HttpResponseStatusCodes::HTTP_INTERNAL_SERVER_ERROR);
@@ -303,7 +303,7 @@ class ContractDetailController extends Controller
                         ]
                     ]
                 ]);
-            } catch(Exception $exception) {
+            } catch(\Exception $exception) {
                 $errorInfo->title = "Failed to obtain the roles for the '{$identityManagerGrant->clientId}' application";
 
                 API::response()->setStatusCode(HttpResponseStatusCodes::HTTP_INTERNAL_SERVER_ERROR);
@@ -324,31 +324,28 @@ class ContractDetailController extends Controller
         $response = null;
         try {
             $response = $idm->get("v1/applications/{$identityManagerGrant->clientId}/roles/{$roleId}/permissions");
-        } catch(Exception $exception) {
+        } catch(\Exception $exception) {
             $errorInfo->title = "Failed to obtain the permissions assigned to the '{$roleId}' role";
-
-            API::response()->setStatusCode(HttpResponseStatusCodes::HTTP_INTERNAL_SERVER_ERROR);
-            API::response()->setHeader("Content-Type", MimeType::Json->value);
-            API::response()->setJsonBody($errorInfo, JSON_UNESCAPED_SLASHES);
-            API::response()->send();
         }
-        $data = json_decode($response->getBody(), true);
-        $permissions = $data["role_permission_assignments"];
+        if ($response) {
+            $data = json_decode($response->getBody(), true);
+            $permissions = $data["role_permission_assignments"];
 
-        if ($permissions) {
-            $errorInfo->details[] = count($permissions) . " permission(s) found, removing…";
+            if ($permissions) {
+                $errorInfo->details[] = count($permissions) . " permission(s) found, removing…";
 
-            foreach ($permissions as $permission) {
-                $errorInfo->details[] = "Removing '{$permission["id"]}' permission…";
+                foreach ($permissions as $permission) {
+                    $errorInfo->details[] = "Removing '{$permission["id"]}' permission…";
 
-                try {
-                    $idm->delete("v1/applications/{$identityManagerGrant->clientId}/permissions/{$permission["id"]}");
-                } catch(Exception $exception) {
-                    $errorInfo->details[] = "❌ Failed to remove the '{$permission["id"]}' permission";
+                    try {
+                        $idm->delete("v1/applications/{$identityManagerGrant->clientId}/permissions/{$permission["id"]}");
+                    } catch(\Exception $exception) {
+                        $errorInfo->details[] = "❌ Failed to remove the '{$permission["id"]}' permission";
+                    }
                 }
+            } else {
+                $errorInfo->details[] = "No permission found, skipping…";
             }
-        } else {
-            $errorInfo->details[] = "No permission found, skipping…";
         }
 
         $baseEndpoint = "/{$contractScopeType->scopeName}/{$contract->scopeEntity}/{$contractDetailScopeType->scopeName}/{$contractDetail->scopeEntity}";
@@ -385,7 +382,7 @@ class ContractDetailController extends Controller
                     $response = $idm->post("v1/applications/{$identityManagerGrant->clientId}/permissions", [
                         "json" => $data
                     ]);
-                } catch(Exception $exception) {
+                } catch(\Exception $exception) {
                     $errorInfo->details[] = "❌ Failed to create the permission with the name '{$data["permission"]["name"]}'";
                     continue;
                 }
@@ -401,7 +398,7 @@ class ContractDetailController extends Controller
                             "Content-Type" => "application/json"
                         ]
                     ]);
-                } catch(Exception $exception) {
+                } catch(\Exception $exception) {
                     $errorInfo->details[] = "❌ Failed to assign the '{$permission["id"]}' permission with the name '{$permission["name"]}' to the '{$roleId}' role";
                     continue;
                 }
