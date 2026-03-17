@@ -19,7 +19,7 @@ class Role extends Model
     public bool $synchronized;
     public int $synchronizationTime;
     public string $dataServiceProviderId;
-    public ?array $lastDelegationEvidence = null;
+    public string $lastDelegationEvidence = "";
     public string $verifiableCredentialType;
     public string $hasWorkspace;
 

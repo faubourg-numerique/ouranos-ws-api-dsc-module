@@ -140,6 +140,7 @@ class RoleController extends Controller
         $dataServiceAccesses = $this->dataServiceAccessManager->readMultiple($query);
 
         $policies = [];
+        $rego = "";
         foreach ($dataServiceAccesses as $dataServiceAccess) {
             $dataService = $this->dataServiceManager->readOne($dataServiceAccess->hasDataService);
             $type = $this->typeManager->readOne($dataService->hasEntityType);
@@ -148,67 +149,77 @@ class RoleController extends Controller
             $query = "hasDataService==\"{$dataService->id}\"";
             $dataServiceActions = $this->dataServiceActionManager->readMultiple($query);
 
-            $query = "hasDataService==\"{$dataService->id}\"";
-            $dataServiceProperties = $this->dataServicePropertyManager->readMultiple($query);
+            // $query = "hasDataService==\"{$dataService->id}\"";
+            // $dataServiceProperties = $this->dataServicePropertyManager->readMultiple($query);
 
-            $properties = [];
-            foreach ($dataServiceProperties as $dataServiceProperty) {
-                $properties[] = $this->propertyManager->readOne($dataServiceProperty->hasProperty);
-            }
+            // $properties = [];
+            // foreach ($dataServiceProperties as $dataServiceProperty) {
+            //     $properties[] = $this->propertyManager->readOne($dataServiceProperty->hasProperty);
+            // }
 
             $actions = [];
             foreach ($dataServiceActions as $dataServiceAction) {
                 $actions[] = $dataActions[$dataServiceAction->hasDataAction]->name;
             }
 
-            $policies[] = [
-                "target" => [
-                    "resource" => [
-                        "type" => $type->name,
-                        "identifiers" => ["*"],
-                        "attributes" => ["*"] // array_column($properties, "name")
-                    ],
-                    "actions" => $actions
+            $policy = [
+                "@context" => [
+                    "odrl" => "http://www.w3.org/ns/odrl/2/",
+                    "dc" => "http://purl.org/dc/elements/1.1/",
+                    "dct" => "http://purl.org/dc/terms/",
+                    "owl" => "http://www.w3.org/2002/07/owl#",
+                    "rdfs" => "http://www.w3.org/2000/01/rdf-schema#",
+                    "skos" => "http://www.w3.org/2004/02/skos/core#"
                 ],
-                "rules" => [
-                    [
-                        "effect" => $data["effect"]
-                    ]
-                ]
-            ];
-        }
-
-        $delegationEvidence = new DelegationEvidence();
-        $delegationEvidence->delegationEvidence = [
-            "notBefore" => $role->notBefore,
-            "notOnOrAfter" => $role->notOnOrAfter,
-            "policyIssuer" => $authorizationRegistry->identifier,
-            "target" => [
-                "accessSubject" => $role->name
-            ],
-            "policySets" => [
-                [
-                    "target" => [
-                        "environment" => [
-                            "licenses" => [
-                                "ISHARE.0001"
+                "@id" => md5($dataServiceAccess->id),
+                "@type" => "odrl:Policy",
+                "odrl:permission" => [
+                    "odrl:target" => [
+                        "@type" => "odrl:AssetCollection",
+                        "odrl:source" => "urn:asset",
+                        "odrl:refinement" => [
+                            [
+                                "@type" => "odrl:Constraint",
+                                "odrl:leftOperand" => "ngsi-ld:entityType",
+                                "odrl:operator" => [
+                                    "@id" => "odrl:eq"
+                                ],
+                                "odrl:rightOperand" => $type->name
                             ]
                         ]
                     ],
-                    "policies" => $policies
+                    "odrl:assignee" => $authorizationRegistryGrant->identifier,
+                    "odrl:action" => []
                 ]
-            ]
-        ];
+            ];
 
-        $authorizationRegistryProxy = new AuthorizationRegistryProxy($authorizationRegistry, $authorizationRegistryGrant);
-        $authorizationRegistryProxy->createPolicy($delegationEvidence);
+            if (array_intersect(["GET"], $actions)) {
+                $policy["odrl:permission"]["odrl:action"][] = "odrl:read";
+            }
+
+            if (array_intersect(["PUT", "POST", "PATCH"], $actions)) {
+                $policy["odrl:permission"]["odrl:action"][] = "odrl:modify";
+            }
+
+            if (array_intersect(["DELETE"], $actions)) {
+                $policy["odrl:permission"]["odrl:action"][] = "odrl:delete";
+            }
+
+            $policies[] = $policy;
+
+            $authorizationRegistryProxy = new AuthorizationRegistryProxy($authorizationRegistry, $authorizationRegistryGrant);
+            $rego .= $authorizationRegistryProxy->createPolicyOdrl($policy);
+            $rego .= "\n\n-----\n\n";
+        }
 
         $role->synchronized = true;
         $role->synchronizationTime = time();
-        $role->lastDelegationEvidence = (array) $delegationEvidence;
+        $role->lastDelegationEvidence = json_encode($policies);
         $this->roleManager->update($role);
 
-        // API::response()->setStatusCode(HttpResponseStatusCodes::HTTP_NO_CONTENT);
+        API::response()->setStatusCode(HttpResponseStatusCodes::HTTP_OK);
+        API::response()->setHeader("Content-Type", MimeType::TextPlain->value);
+        API::response()->setBody($rego);
         API::response()->send();
     }
 }

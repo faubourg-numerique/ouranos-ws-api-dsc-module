@@ -2,11 +2,16 @@
 
 namespace API\Modules\DSC\Proxies;
 
+use API\Enums\MimeType;
 use API\Modules\DSC\Models\AuthorizationRegistry;
 use API\Modules\DSC\Models\AuthorizationRegistryGrant;
 use API\Modules\DSC\Models\DelegationEvidence;
 use API\Modules\DSC\Models\DelegationRequest;
 use API\StaticClasses\Utils;
+use Core\Helpers\RequestHelper;
+use Core\HttpRequestMethods;
+use Core\HttpResponseStatusCodes;
+use Exception;
 use FaubourgNumerique\IShareToolsForI4Trust\IShareToolsForI4Trust;
 
 class AuthorizationRegistryProxy
@@ -54,6 +59,33 @@ class AuthorizationRegistryProxy
         ];
 
         IShareToolsForI4Trust::createPolicy($config);
+    }
+
+    public function createPolicyOdrl($policy)
+    {
+        try {
+            $request = new RequestHelper();
+            $request->setMethod(HttpRequestMethods::DELETE);
+            $request->setUrl("{$this->authorizationRegistry->getPolicyUrl()}/{$policy["@id"]}");
+            $request->setTimeout($_ENV["REQUESTS_TIMEOUT"]);
+            $request->send();
+            $request = null;
+        } catch (\Exception $exception) {
+        }
+
+        $request = new RequestHelper();
+        $request->setMethod(HttpRequestMethods::PUT);
+        $request->setUrl("{$this->authorizationRegistry->getPolicyUrl()}/{$policy["@id"]}");
+        $request->setHeader("Content-Type", MimeType::Json->value);
+        $request->setJsonBody($policy);
+        $request->setTimeout($_ENV["REQUESTS_TIMEOUT"]);
+        $response = $request->send();
+
+        if ($response->getError()) {
+            throw new \Exception(json_encode($response));
+        }
+
+        return $response->getBody();
     }
 
     public function requestDelegation(DelegationRequest $delegationRequest): DelegationEvidence
