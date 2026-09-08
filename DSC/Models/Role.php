@@ -52,7 +52,7 @@ class Role extends Model
         $this->synchronizationTime = $entity->getProperty("synchronizationTime");
         $this->dataServiceProviderId = $entity->getProperty("dataServiceProviderId");
         if ($entity->propertyExists("lastDelegationEvidence")) {
-            $this->lastDelegationEvidence = $entity->getProperty("lastDelegationEvidence");
+            $this->lastDelegationEvidence = strval(json_encode($entity->getProperty("lastDelegationEvidence")));
         }
         $this->verifiableCredentialType = $entity->getProperty("verifiableCredentialType");
         $this->hasWorkspace = $entity->getRelationship("hasWorkspace");
